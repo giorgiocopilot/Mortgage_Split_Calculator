@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Offline Mortgage Split Calculator</title>
+<style>
+  :root{
+    --bg:#0b1020;
+    --panel:#121933;
+    --panel2:#0f1530;
+    --text:#eef2ff;
+    --muted:#a8b0d3;
+    --accent:#7aa2ff;
+    --good:#22c55e;
+    --warn:#f59e0b;
+    --line:#243055;
+    --bad:#ef4444;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:Inter,Segoe UI,Arial,sans-serif;
+    background:linear-gradient(180deg,#0a1022,#0d1430 38%,#0b1020);
+    color:var(--text);
+  }
+  .wrap{max-width:1200px;margin:0 auto;padding:16px}
+  h1{font-size:clamp(24px,4vw,38px);margin:8px 0 6px}
+  p{color:var(--muted);margin:8px 0 0;line-height:1.45}
+  .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:14px;margin-top:16px}
+  .card{background:rgba(18,25,51,.92);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 10px 25px rgba(0,0,0,.18)}
+  .inputs{grid-column:span 4}
+  .summary{grid-column:span 8}
+  .full{grid-column:1/-1}
+  .two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  label{display:block;font-size:13px;color:var(--muted);margin:0 0 6px}
+  input,select,button{
+    width:100%;border-radius:12px;border:1px solid var(--line);
+    background:#0b1229;color:var(--text);padding:12px 13px;font-size:15px
+  }
+  input:focus,select:focus{outline:2px solid rgba(122,162,255,.35);border-color:var(--accent)}
+  button{background:var(--accent);color:#081125;font-weight:700;cursor:pointer}
+  button.secondary{background:#172243;color:var(--text)}
+  .btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+  .statGrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+  .stat{background:var(--panel2);border:1px solid var(--line);border-radius:16px;padding:14px}
+  .k{font-size:12px;color:var(--muted)}
+  .v{font-size:clamp(18px,3vw,28px);font-weight:800;margin-top:6px}
+  .good{color:var(--good)}
+  .warn{color:var(--warn)}
+  .bad{color:var(--bad)}
+  .mini{font-size:12px;color:var(--muted);margin-top:5px}
+  .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .tab{padding:10px 12px;border-radius:999px;border:1px solid var(--line);background:#0b1229;color:var(--text);cursor:pointer}
+  .tab.active{background:var(--accent);color:#081125;border-color:transparent;font-weight:700}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+  th:first-child,td:first-child{text-align:left}
+  .tableWrap{overflow:auto;max-height:58vh;border:1px solid var(--line);border-radius:14px}
+  .note{font-size:13px;color:var(--muted);line-height:1.45}
+  .bar{height:14px;background:#0b1229;border-radius:999px;border:1px solid var(--line);overflow:hidden}
+  .bar > div{height:100%;background:linear-gradient(90deg,var(--accent),#9cc3ff)}
+  canvas{width:100%;height:280px;background:#0b1229;border:1px solid var(--line);border-radius:14px}
+  .inline{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .inline input[type=checkbox]{width:auto;transform:scale(1.1)}
+  .pill{display:inline-block;padding:6px 10px;background:#0b1229;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:12px}
+  @media (max-width: 980px){
+    .inputs,.summary{grid-column:1/-1}
+    .statGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  }
+  @media (max-width: 560px){
+    .two,.statGrid,.btns{grid-template-columns:1fr}
+    .wrap{padding:12px}
+    th,td{font-size:12px;padding:8px 6px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Offline Mortgage Split Calculator</h1>
+  <p>See how each monthly payment is split into interest and principal, and how extra monthly payments change the result. Works fully offline.</p>
+
+  <div class="grid">
+    <section class="card inputs">
+      <div class="two">
+        <div>
+          <label>Loan amount</label>
+          <input id="principal" type="number" step="0.01" value="358202.73">
+        </div>
+        <div>
+          <label>Annual rate %</label>
+          <input id="rate" type="number" step="0.01" value="5.91">
+        </div>
+        <div>
+          <label>Term in months</label>
+          <input id="months" type="number" step="1" value="338">
+        </div>
+        <div>
+          <label>Regular payment</label>
+          <input id="payment" type="number" step="0.01" value="2178.05">
+        </div>
+        <div>
+          <label>Extra monthly payment</label>
+          <input id="extraMonthly" type="number" step="0.01" value="3000">
+        </div>
+        <div>
+          <label>Start extra from month</label>
+          <input id="extraStart" type="number" step="1" min="1" value="1">
+        </div>
+        <div>
+          <label>One time extra amount</label>
+          <input id="oneTimeExtra" type="number" step="0.01" value="0">
+        </div>
+        <div>
+          <label>One time extra in month</label>
+          <input id="oneTimeMonth" type="number" step="1" min="1" value="1">
+        </div>
+      </div>
+
+      <div style="margin-top:14px">
+        <label>After extra payment, prefer</label>
+        <select id="strategy">
+          <option value="shorten">Shorter loan term</option>
+          <option value="lower">Lower monthly payment</option>
+        </select>
+      </div>
+
+      <div class="inline" style="margin-top:12px">
+        <input id="useAccrued" type="checkbox">
+        <label for="useAccrued" style="margin:0">Include extra accrued interest shown by bank</label>
+      </div>
+      <div style="margin-top:8px">
+        <label>If yes, extra accrued interest amount</label>
+        <input id="accruedInterest" type="number" step="0.01" value="227.63">
+      </div>
+
+      <div class="btns">
+        <button id="calcBtn">Calculate</button>
+        <button id="csvBtn" class="secondary">Export CSV</button>
+      </div>
+
+      <p class="note" style="margin-top:12px">Tip: if your bank says an extra repayment does not replace the next instalment, keep your normal monthly instalment and treat the extra payment as separate principal reduction.</p>
+    </section>
+
+    <section class="card summary">
+      <div class="tabs">
+        <button class="tab active" data-tab="overview">Overview</button>
+        <button class="tab" data-tab="chart">Chart</button>
+        <button class="tab" data-tab="table">Schedule</button>
+      </div>
+
+      <div id="overview" class="tabPanel">
+        <div class="statGrid">
+          <div class="stat">
+            <div class="k">Payoff time</div>
+            <div class="v" id="payoffTime">0</div>
+            <div class="mini" id="payoffDelta"></div>
+          </div>
+          <div class="stat">
+            <div class="k">Total interest</div>
+            <div class="v" id="totalInterest">0</div>
+            <div class="mini" id="interestDelta"></div>
+          </div>
+          <div class="stat">
+            <div class="k">Total paid</div>
+            <div class="v" id="totalPaid">0</div>
+            <div class="mini" id="paidDelta"></div>
+          </div>
+          <div class="stat">
+            <div class="k">Next month split</div>
+            <div class="v" id="nextSplit">0</div>
+            <div class="mini" id="nextSplitMini"></div>
+          </div>
+        </div>
+
+        <div class="two" style="margin-top:14px">
+          <div class="card" style="padding:14px">
+            <div class="k">Interest share in month 1</div>
+            <div class="bar" style="margin-top:10px"><div id="interestBar" style="width:0%"></div></div>
+            <div class="mini" id="barText"></div>
+          </div>
+          <div class="card" style="padding:14px">
+            <div class="k">Comparison vs no extra payments</div>
+            <table>
+              <tbody>
+                <tr><td>Months saved</td><td id="monthsSaved"></td></tr>
+                <tr><td>Interest saved</td><td id="interestSaved"></td></tr>
+                <tr><td>Principal paid in month 1</td><td id="principalMonth1"></td></tr>
+                <tr><td>Extra cash this month</td><td id="extraCashThisMonth"></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="chart" class="tabPanel" style="display:none">
+        <canvas id="chartCanvas" width="1000" height="280"></canvas>
+        <p class="note">Blue line shows remaining balance. Green bars show principal. Amber bars show interest.</p>
+      </div>
+
+      <div id="table" class="tabPanel" style="display:none">
+        <div class="tableWrap">
+          <table id="scheduleTable">
+            <thead>
+              <tr>
+                <th>Month</th>
+                <th>Payment</th>
+                <th>Interest</th>
+                <th>Principal</th>
+                <th>Extra</th>
+                <th>Balance</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="card full">
+      <span class="pill">Offline file</span>
+      <span class="pill">No internet needed</span>
+      <span class="pill">CSV export included</span>
+      <p class="note">This calculator uses standard amortization math. If your bank adds accrued interest on the day of an extra repayment, enable that checkbox to see the effect on total cost.</p>
+    </section>
+  </div>
+</div>
+
+<script>
+const fmt = new Intl.NumberFormat('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+let latestRows = [];
+
+function money(v){ return fmt.format(v); }
+function monthsToText(m){
+  const y = Math.floor(m/12);
+  const mm = m%12;
+  return `${m} mo (${y}y ${mm}m)`;
+}
+
+function baselineSchedule(P, annualRate, months, payment){
+  const r = annualRate/12/100;
+  let bal = P;
+  const rows = [];
+  let totalInterest = 0, totalPaid = 0;
+  for(let i=1;i<=months && bal>0.009;i++){
+    const interest = bal*r;
+    let principal = payment - interest;
+    if(principal > bal) principal = bal;
+    const actualPayment = interest + principal;
+    bal = Math.max(0, bal - principal);
+    rows.push({month:i,payment:actualPayment,interest,principal,extra:0,balance:bal});
+    totalInterest += interest;
+    totalPaid += actualPayment;
+  }
+  return {rows,totalInterest,totalPaid,months:rows.length};
+}
+
+function calcLowerPayment(balance, r, monthsLeft){
+  if(monthsLeft <= 0) return 0;
+  if(r === 0) return balance / monthsLeft;
+  return balance * r / (1 - Math.pow(1+r, -monthsLeft));
+}
+
+function scenarioSchedule(P, annualRate, months, payment, extraMonthly, extraStart, oneTimeExtra, oneTimeMonth, strategy, accruedExtra){
+  const r = annualRate/12/100;
+  let bal = P;
+  let currentPayment = payment;
+  let totalInterest = 0, totalPaid = 0;
+  const rows = [];
+
+  for(let i=1;i<=2000 && bal>0.009;i++){
+    const interest = bal*r;
+    let scheduledPrincipal = currentPayment - interest;
+    if(scheduledPrincipal < 0) scheduledPrincipal = 0;
+    let extra = 0;
+    if(i >= extraStart) extra += extraMonthly;
+    if(i === oneTimeMonth) extra += oneTimeExtra;
+
+    let principal = scheduledPrincipal + extra;
+    let accrued = (i === oneTimeMonth && accruedExtra > 0) ? accruedExtra : 0;
+
+    if(principal > bal) principal = bal;
+    let actualPayment = interest + principal + accrued;
+    bal = Math.max(0, bal - principal);
+
+    rows.push({month:i,payment:actualPayment,interest:interest + accrued,principal:scheduledPrincipal,extra,balance:bal});
+    totalInterest += interest + accrued;
+    totalPaid += actualPayment;
+
+    if(strategy === 'lower' && extra > 0 && bal > 0.009){
+      const monthsLeft = Math.max(months - i, 1);
+      currentPayment = calcLowerPayment(bal, r, monthsLeft);
+    }
+
+    if(strategy === 'shorten' && i >= months && bal <= 0.009) break;
+  }
+  return {rows,totalInterest,totalPaid,months:rows.length};
+}
+
+function drawChart(rows){
+  const canvas = document.getElementById('chartCanvas');
+  const c = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  c.clearRect(0,0,w,h);
+  c.fillStyle = '#0b1229';
+  c.fillRect(0,0,w,h);
+
+  const pad = {l:50,r:20,t:20,b:35};
+  const plotW = w-pad.l-pad.r;
+  const plotH = h-pad.t-pad.b;
+  const visible = rows.slice(0, Math.min(rows.length, 60));
+  if(!visible.length) return;
+  const maxBal = Math.max(...visible.map(r=>r.balance), 1);
+  const maxPayPart = Math.max(...visible.map(r=>Math.max(r.interest, r.principal + r.extra)), 1);
+
+  c.strokeStyle = '#30416f'; c.lineWidth = 1;
+  for(let i=0;i<=4;i++){
+    const y = pad.t + plotH*i/4;
+    c.beginPath(); c.moveTo(pad.l, y); c.lineTo(w-pad.r, y); c.stroke();
+  }
+
+  const step = plotW / visible.length;
+  visible.forEach((r, idx) => {
+    const x = pad.l + idx*step + step*0.15;
+    const barW = Math.max(4, step*0.28);
+    const intH = (r.interest/maxPayPart) * (plotH*0.45);
+    const prH = ((r.principal+r.extra)/maxPayPart) * (plotH*0.45);
+    c.fillStyle = '#f59e0b';
+    c.fillRect(x, pad.t+plotH-intH, barW, intH);
+    c.fillStyle = '#22c55e';
+    c.fillRect(x+barW+2, pad.t+plotH-prH, barW, prH);
+  });
+
+  c.strokeStyle = '#7aa2ff'; c.lineWidth = 2.5; c.beginPath();
+  visible.forEach((r, idx) => {
+    const x = pad.l + idx*step + step/2;
+    const y = pad.t + (1 - r.balance/maxBal) * 0 + pad.t + (r.balance/maxBal) * plotH;
+    if(idx===0) c.moveTo(x,y); else c.lineTo(x,y);
+  });
+  c.stroke();
+
+  c.fillStyle = '#a8b0d3'; c.font = '12px Arial';
+  c.fillText('1', pad.l, h-12);
+  c.fillText(String(visible.length), w-pad.r-20, h-12);
+  c.fillText('Months', w/2-18, h-12);
+  c.fillText('Balance', 8, 16);
+}
+
+function render(){
+  const P = parseFloat(document.getElementById('principal').value || 0);
+  const rate = parseFloat(document.getElementById('rate').value || 0);
+  const months = parseInt(document.getElementById('months').value || 0, 10);
+  const payment = parseFloat(document.getElementById('payment').value || 0);
+  const extraMonthly = parseFloat(document.getElementById('extraMonthly').value || 0);
+  const extraStart = parseInt(document.getElementById('extraStart').value || 1, 10);
+  const oneTimeExtra = parseFloat(document.getElementById('oneTimeExtra').value || 0);
+  const oneTimeMonth = parseInt(document.getElementById('oneTimeMonth').value || 1, 10);
+  const strategy = document.getElementById('strategy').value;
+  const useAccrued = document.getElementById('useAccrued').checked;
+  const accruedInterest = parseFloat(document.getElementById('accruedInterest').value || 0);
+  const accruedExtra = useAccrued ? accruedInterest : 0;
+
+  const base = baselineSchedule(P, rate, months, payment);
+  const sc = scenarioSchedule(P, rate, months, payment, extraMonthly, extraStart, oneTimeExtra, oneTimeMonth, strategy, accruedExtra);
+  latestRows = sc.rows;
+
+  const month1 = sc.rows[0] || {interest:0, principal:0, extra:0, payment:0};
+  const interestShare = month1.payment ? ((month1.interest / month1.payment) * 100) : 0;
+  document.getElementById('payoffTime').textContent = monthsToText(sc.months);
+  document.getElementById('payoffDelta').textContent = `${base.months - sc.months} months faster than baseline`;
+  document.getElementById('totalInterest').textContent = money(sc.totalInterest);
+  document.getElementById('interestDelta').textContent = `${money(base.totalInterest - sc.totalInterest)} saved`;
+  document.getElementById('totalPaid').textContent = money(sc.totalPaid);
+  document.getElementById('paidDelta').textContent = `${money(base.totalPaid - sc.totalPaid)} less than baseline`;
+  document.getElementById('nextSplit').textContent = `${money(month1.interest)} / ${money(month1.principal + month1.extra)}`;
+  document.getElementById('nextSplitMini').textContent = `interest / principal+extra`;
+  document.getElementById('interestBar').style.width = Math.max(0, Math.min(100, interestShare)) + '%';
+  document.getElementById('barText').textContent = `${interestShare.toFixed(1)}% of month 1 goes to interest`;
+  document.getElementById('monthsSaved').textContent = `${base.months - sc.months}`;
+  document.getElementById('interestSaved').textContent = money(base.totalInterest - sc.totalInterest);
+  document.getElementById('principalMonth1').textContent = money(month1.principal + month1.extra);
+  document.getElementById('extraCashThisMonth').textContent = money(extraMonthly + (oneTimeMonth === 1 ? oneTimeExtra : 0) + accruedExtra);
+
+  const tbody = document.querySelector('#scheduleTable tbody');
+  tbody.innerHTML = '';
+  sc.rows.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${r.month}</td><td>${money(r.payment)}</td><td>${money(r.interest)}</td><td>${money(r.principal)}</td><td>${money(r.extra)}</td><td>${money(r.balance)}</td>`;
+    tbody.appendChild(tr);
+  });
+  drawChart(sc.rows);
+}
+
+function exportCSV(){
+  const head = ['Month','Payment','Interest','Principal','Extra','Balance'];
+  const lines = [head.join(',')];
+  latestRows.forEach(r => lines.push([r.month,r.payment.toFixed(2),r.interest.toFixed(2),r.principal.toFixed(2),r.extra.toFixed(2),r.balance.toFixed(2)].join(',')));
+  const blob = new Blob([lines.join('\n')], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'mortgage_schedule.csv';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById('calcBtn').addEventListener('click', render);
+document.getElementById('csvBtn').addEventListener('click', exportCSV);
+document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', () => {
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.tabPanel').forEach(x=>x.style.display='none');
+  btn.classList.add('active');
+  document.getElementById(btn.dataset.tab).style.display='block';
+  if(btn.dataset.tab === 'chart') drawChart(latestRows);
+}));
+
+render();
+</script>
+</body>
+</html>
